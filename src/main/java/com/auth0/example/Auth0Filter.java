@@ -128,6 +128,12 @@ public class Auth0Filter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain next) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
+        String bearer = req.getHeader("Authorization");
+        if (bearer != null) {
+           bearer = bearer.substring(bearer.indexOf("Bearer") + 7).trim();
+           SessionUtils.set(req, "accessToken", bearer);
+        }
+
         String accessToken = (String) SessionUtils.get(req, "accessToken");
         String idToken = (String) SessionUtils.get(req, "idToken");
         System.out.println("Access token " + accessToken);
@@ -143,11 +149,18 @@ public class Auth0Filter implements Filter {
             verifier.verify(jwt.getToken());
          }
         	if (Instant.now().isAfter(jwt.getExpiresAt().toInstant())) {
-                res.sendRedirect("/login");
+                res.sendRedirect(req.getContextPath() + "/login");
                 return;
         	}
         }
 				System.out.println(this.info);
+
+        if (accessToken != null && verifier != null) {
+           System.out.println("Verifikujeme accessToken");
+           final DecodedJWT atjwt = JWT.decode(accessToken);
+           verifier.verify(atjwt.getToken());
+        }
+
         if (accessToken != null && this.info != null && this.info.getEmail() == null) {
         	final AuthAPI auth0 = new AuthAPI(domain, clientId, clientSecret);
         	final Request<UserInfo> info = auth0.userInfo(accessToken);
@@ -157,13 +170,12 @@ public class Auth0Filter implements Filter {
         	this.info.setEmail(sub.startsWith("google-oauth2") ? nickname + "@gmail.com" : name);
         }
         if (accessToken == null && idToken == null) {
-            res.sendRedirect("/login");
+            res.sendRedirect(req.getContextPath() + "/login");
             return;
         }
         next.doFilter(request, response);
     }
 
-    @Override
     public void destroy() {
     }
 }

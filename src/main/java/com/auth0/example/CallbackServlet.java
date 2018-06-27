@@ -87,10 +87,10 @@ public class CallbackServlet extends HttpServlet {
             Tokens tokens = authenticationController.handle(req);
             SessionUtils.set(req, "accessToken", tokens.getAccessToken());
             SessionUtils.set(req, "idToken", tokens.getIdToken());
-            res.sendRedirect(redirectOnSuccess);
+            res.sendRedirect(req.getContextPath() + redirectOnSuccess);
         } catch (IdentityVerificationException e) {
             e.printStackTrace();
-            res.sendRedirect(redirectOnFail);
+            res.sendRedirect(req.getContextPath() + redirectOnFail);
         }
     }
 
